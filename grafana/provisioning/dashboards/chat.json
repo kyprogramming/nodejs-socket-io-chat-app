@@ -1,0 +1,235 @@
+{
+    "__inputs": [],
+    "__requires": [],
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "panels": [
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "blue",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "none"
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "id": 1,
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "auto",
+                "textMode": "auto",
+                "colorMode": "background"
+            },
+            "title": "Active Connections",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "chat_active_connections",
+                    "legendFormat": "connections"
+                }
+            ]
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "id": 2,
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "colorMode": "background"
+            },
+            "title": "Total Messages",
+            "type": "stat",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "chat_total_messages_total",
+                    "legendFormat": "messages"
+                }
+            ]
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "short"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 4
+            },
+            "id": 3,
+            "options": {
+                "tooltip": {
+                    "mode": "multi"
+                }
+            },
+            "title": "Messages Per Minute",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "rate(chat_total_messages_total[1m]) * 60",
+                    "legendFormat": "msg/min"
+                }
+            ]
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "bytes"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 4
+            },
+            "id": 4,
+            "title": "Node.js Heap Usage",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "nodejs_heap_size_used_bytes",
+                    "legendFormat": "heap used"
+                },
+                {
+                    "datasource": "Prometheus",
+                    "expr": "nodejs_heap_size_total_bytes",
+                    "legendFormat": "heap total"
+                }
+            ]
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "percentunit"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 12
+            },
+            "id": 5,
+            "title": "CPU Usage",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "rate(process_cpu_seconds_total[1m])",
+                    "legendFormat": "cpu"
+                }
+            ]
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "short"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 12
+            },
+            "id": 6,
+            "title": "Active Connections Over Time",
+            "type": "timeseries",
+            "targets": [
+                {
+                    "datasource": "Prometheus",
+                    "expr": "chat_active_connections",
+                    "legendFormat": "connections"
+                }
+            ]
+        }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "tags": [
+        "chat",
+        "nodejs"
+    ],
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "title": "Nexus Chat Dashboard",
+    "uid": "nexus-chat-001",
+    "version": 1
+}

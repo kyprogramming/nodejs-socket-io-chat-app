@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "3000:3000"
+    networks:
+      - chat-network
     env_file:
       - .env
     depends_on:
@@ -17,6 +19,8 @@ services:
     image: mongo
     volumes:
       - mongo_data:/data/db
+    networks:
+      - chat-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -27,6 +31,8 @@ services:
     image: mongo-express
     ports:
       - "8081:8081"
+    networks:
+      - chat-network
     environment:
       - ME_CONFIG_MONGODB_SERVER=mongo
       - ME_CONFIG_BASICAUTH=false
@@ -39,6 +45,8 @@ services:
     image: redis
     volumes:
       - redis_data:/data
+    networks:
+      - chat-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -49,6 +57,8 @@ services:
     image: redis/redisinsight:latest
     ports:
       - "5540:5540"
+    networks:
+      - chat-network
     depends_on:
       redis:
         condition: service_healthy
@@ -58,6 +68,8 @@ services:
     image: apache/kafka:3.9.0
     ports:
       - "9092:9092"
+    networks:
+      - chat-network
     environment:
       KAFKA_NODE_ID: 0
       KAFKA_PROCESS_ROLES: broker,controller
@@ -75,23 +87,60 @@ services:
       retries: 5
       start_period: 20s
 
+  # ✅ Kafka UI — view topics, messages, consumer groups
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    networks:
+      - chat-network
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus
+    depends_on:
+      - app
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus        # ← persist data across restarts
     ports:
       - "9090:9090"
+    networks:
+    - chat-network
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"   # keep 15 days of data
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana
     ports:
       - "3001:3000"
+    networks:
+      - chat-network
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin    # ← allows editing without login
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/chat.json
+    volumes:
+      - grafana_data:/var/lib/grafana                          # persist dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning       # auto-provision
     depends_on:
       - prometheus
     restart: unless-stopped
 
+networks:
+  chat-network:
+    driver: bridge
+
 volumes:
   mongo_data:
   redis_data:
+  prometheus_data:   # ← add this
+  grafana_data:      # ← add this
