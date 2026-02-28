@@ -1,15 +1,18 @@
 import client from "prom-client";
 
-client.collectDefaultMetrics();
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
 
 export const activeConnections = new client.Gauge({
-    name: "active_socket_connections",
-    help: "Active socket connections",
+    name: "chat_active_connections",
+    help: "Number of active socket connections",
+    registers: [register],
 });
 
 export const totalMessages = new client.Counter({
-    name: "total_chat_messages",
-    help: "Total chat messages",
+    name: "chat_total_messages",
+    help: "Total messages sent",
+    registers: [register],
 });
 
-export default client;
+export default { register };

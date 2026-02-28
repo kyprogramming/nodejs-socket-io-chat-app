@@ -5,10 +5,6 @@ const messageSchema = new mongoose.Schema({
     room: String,
     receiver: String, // for private chat
     content: String,
-    timestamp: {
-        type: Date,
-        default: Date.now,
-    },
-});
+}, { timestamps: true });
 
 export default mongoose.model("Message", messageSchema);
