@@ -1,5 +1,6 @@
+import "dotenv/config";
+
 import http from "http";
-import dotenv from "dotenv";
 import { Server } from "socket.io";
 import app from "./app.js";
 import connectDB from "./config/db.js";
@@ -7,9 +8,7 @@ import { connectRedis } from "./config/redis.js";
 import { chatSocket } from "./sockets/chatSocket.js";
 import { connectKafka } from "./config/kafka.js";
 
-dotenv.config();
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function connectWithRetry(name, fn, retries = 5, delay = 3000) {
     for (let i = 1; i <= retries; i++) {
         try {
@@ -26,7 +25,6 @@ async function connectWithRetry(name, fn, retries = 5, delay = 3000) {
         }
     }
 }
-
 
 await connectWithRetry("MongoDB", connectDB);
 await connectWithRetry("Redis", connectRedis);

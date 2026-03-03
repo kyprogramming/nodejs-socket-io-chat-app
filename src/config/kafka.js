@@ -1,8 +1,24 @@
+import fs from "fs";
+import path from "path";
 import { Kafka, Partitioners } from "kafkajs";
+
+const sslConfig = {
+    ca: [fs.readFileSync(path.resolve("./src/certs/ca.pem"), "utf-8")],
+    key: fs.readFileSync(path.resolve("./src/certs/service.key"), "utf-8"),
+    cert: fs.readFileSync(path.resolve("./src/certs/service.cert"), "utf-8"),
+};
 
 const kafka = new Kafka({
     clientId: "chat-app",
-    brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
+    // brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
+    brokers: [process.env.KAFKA_BROKER],
+    ssl: {
+        rejectUnauthorized: true,
+        ca: [fs.readFileSync(path.resolve("./src/certs/ca.pem"), "utf-8")],
+        key: fs.readFileSync(path.resolve("./src/certs/service.key"), "utf-8"),
+        cert: fs.readFileSync(path.resolve("./src/certs/service.cert"), "utf-8"),
+    },
+    logLevel: 2,
 });
 
 export const producer = kafka.producer({
