@@ -37,6 +37,7 @@ const io = new Server(server, {
 
 chatSocket(io);
 
-server.listen(process.env.PORT || 3000, () => {
-    console.log(`Server running on port ${process.env.PORT || 3000}`);
+server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    // This tells the server to listen to your laptop's IP (e.g. 192.168.x.x)
 });
