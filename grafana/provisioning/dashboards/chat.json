@@ -94,7 +94,7 @@
             "targets": [
                 {
                     "datasource": "Prometheus",
-                    "expr": "chat_total_messages_total",
+                    "expr": "chat_total_messages",
                     "legendFormat": "messages"
                 }
             ]
@@ -126,7 +126,7 @@
             "targets": [
                 {
                     "datasource": "Prometheus",
-                    "expr": "rate(chat_total_messages_total[1m]) * 60",
+                    "expr": "rate(chat_total_messages[1m]) * 60",
                     "legendFormat": "msg/min"
                 }
             ]

@@ -2,7 +2,7 @@
 
 Client sends message → socket.emit()
 
-Server receives message → io.on("connection")
+Server receives message → io.on("connection")  →   socket.on("joinRoom"
 
 Server broadcasts → io.emit()
 
