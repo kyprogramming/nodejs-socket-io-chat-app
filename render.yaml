@@ -1,0 +1,91 @@
+services:
+# 1. Main Application
+- type: web
+  name: chat-app
+  runtime: docker
+  envVars:
+  - key: MONGO_URI
+    fromService:
+      type: pserv
+      name: mongo-db
+      property: host
+    # Note: You'll need to append :27017/chatapp in your code or via another var
+  - key: REDIS_URL
+    fromService:
+      type: pserv
+      name: redis-cache
+      property: hostport
+  - key: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka-broker:9092
+
+# 2. MongoDB
+- type: pserv
+  name: mongo-db
+  runtime: image
+  image: mongo
+  disk:
+    name: mongo-data
+    mountPath: /data/db
+    sizeGB: 1
+
+# 3. Redis
+- type: pserv
+  name: redis-cache
+  runtime: image
+  image: redis
+  disk:
+    name: redis-data
+    mountPath: /data
+    sizeGB: 1
+
+# 4. Kafka (Simplified for Single Node)
+- type: pserv
+  name: kafka-broker
+  runtime: image
+  image: apache/kafka:3.9.0
+  envVars:
+  - key: KAFKA_NODE_ID
+    value: 0
+  - key: KAFKA_PROCESS_ROLES
+    value: broker,controller
+  - key: KAFKA_CONTROLLER_QUORUM_VOTERS
+    value: 0@kafka-broker:9093
+  - key: KAFKA_LISTENERS
+    value: PLAINTEXT://:9092,CONTROLLER://:9093
+  - key: KAFKA_ADVERTISED_LISTENERS
+    value: PLAINTEXT://kafka-broker:9092
+  - key: KAFKA_CONTROLLER_LISTENER_NAMES
+    value: CONTROLLER
+
+# 5. Monitoring (Prometheus & Grafana)
+- type: web
+  name: prometheus
+  runtime: image
+  image: prom/prometheus
+  disk:
+    name: prometheus-data
+    mountPath: /prometheus
+    sizeGB: 1
+
+- type: web
+  name: grafana
+  runtime: image
+  image: grafana/grafana
+  envVars:
+  - key: GF_AUTH_ANONYMOUS_ENABLED
+    value: "true"
+  disk:
+    name: grafana-data
+    mountPath: /var/lib/grafana
+    sizeGB: 1
+
+# 6. UIs (Kafka UI / Mongo Express)
+- type: web
+  name: kafka-ui
+  runtime: image
+  image: provectuslabs/kafka-ui:latest
+  envVars:
+  - key: KAFKA_CLUSTERS_0_NAME
+    value: local
+  - key: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+    value: kafka-broker:9092
