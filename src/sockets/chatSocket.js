@@ -4,82 +4,91 @@ import { producer, consumer } from "../config/kafka.js";
 import { redisClient } from "../config/redis.js";
 
 export const chatSocket = (io) => {
-    // ── Kafka consumer: receives events and broadcasts to room ──
     consumer.run({
         eachMessage: async ({ message }) => {
             const msg = JSON.parse(message.value.toString());
-            io.to(msg.room).emit("message", msg);
-            console.log(`Kafka → broadcast to room ${msg.room}`);
+            if (msg.type === "file") io.to(msg.room).emit("fileMessage", msg);
+            else io.to(msg.room).emit("message", msg);
         },
     });
 
     io.on("connection", (socket) => {
-        console.log("Socket connected:", socket.id);
         activeConnections.inc();
+        let joinedRoom = null,
+            joinedUser = null;
 
-        let joinedRoom = null;
-        let joinedUser = null;
-
-        // ── Join room ──────────────────────────────────────────
+        // ── Join ────────────────────────────────────────────
         socket.on("joinRoom", async ({ room, user }) => {
             socket.join(room);
             joinedRoom = room;
             joinedUser = user;
-
-            // Redis: track online presence
             await redisClient.sAdd(`room:${room}:online`, user);
-            const onlineUsers = await redisClient.sMembers(`room:${room}:online`);
-            io.to(room).emit("onlineUsers", onlineUsers);
-
-            // Redis: send cached message history to joining user
+            io.to(room).emit("onlineUsers", await redisClient.sMembers(`room:${room}:online`));
             const history = await redisClient.lRange(`room:${room}:messages`, 0, 49);
             socket.emit("history", history.map(JSON.parse).reverse());
-
-            console.log(`${user} joined room ${room}`);
         });
 
-        // ── Send message ───────────────────────────────────────
+        // ── Text message ────────────────────────────────────
         socket.on("message", async ({ room, user, content }) => {
             if (!room || !user || !content) {
-                socket.emit("error", { message: "room, user and content are required." });
+                socket.emit("error", { message: "Missing fields." });
                 return;
             }
-
-            // Redis: rate limiting — max 10 messages per 10 seconds
-            const rateLimitKey = `ratelimit:${user}`;
-            const count = await redisClient.incr(rateLimitKey);
-            if (count === 1) await redisClient.expire(rateLimitKey, 10);
+            const key = `ratelimit:${user}`;
+            const count = await redisClient.incr(key);
+            if (count === 1) await redisClient.expire(key, 10);
             if (count > 10) {
                 socket.emit("error", { message: "Too many messages. Slow down." });
                 return;
             }
-
-            // Save to MongoDB
             const msg = await Message.create({ sender: user, room, content });
             totalMessages.inc();
-
-            // Redis: cache message, keep last 50
             await redisClient.lPush(`room:${room}:messages`, JSON.stringify(msg));
             await redisClient.lTrim(`room:${room}:messages`, 0, 49);
-
-            // Kafka: publish event (consumer above will broadcast to room)
-            await producer.send({
-                topic: "chat-messages",
-                messages: [{ value: JSON.stringify(msg) }],
-            });
-
-            console.log(`Message published to Kafka — room: ${room}`);
+            await producer.send({ topic: "chat-messages", messages: [{ value: JSON.stringify(msg) }] });
         });
 
-        // ── Disconnect ─────────────────────────────────────────
-        socket.on("disconnect", async () => {
-            console.log("Socket disconnected:", socket.id);
-            activeConnections.dec();
+        // ── File message ────────────────────────────────────
+        socket.on("fileMessage", async ({ room, user, fileData }) => {
+            if (!room || !user || !fileData) {
+                socket.emit("error", { message: "Missing fields." });
+                return;
+            }
+            const key = `ratelimit:${user}`;
+            const count = await redisClient.incr(key);
+            if (count === 1) await redisClient.expire(key, 10);
+            if (count > 10) {
+                socket.emit("error", { message: "Too many messages. Slow down." });
+                return;
+            }
+            if (fileData.data?.length > 14_000_000) {
+                socket.emit("error", { message: "File too large (max 10 MB)." });
+                return;
+            }
 
+            const msg = await Message.create({ sender: user, room, content: `[File: ${fileData.name}]`, type: "file", fileData });
+            totalMessages.inc();
+
+            const payload = { _id: msg._id, sender: user, room, type: "file", fileData, createdAt: msg.createdAt };
+            await redisClient.lPush(`room:${room}:messages`, JSON.stringify(payload));
+            await redisClient.lTrim(`room:${room}:messages`, 0, 49);
+            await producer.send({ topic: "chat-messages", messages: [{ value: JSON.stringify(payload) }] });
+        });
+
+        // ── WebRTC signalling (pure relay, no media on server) ─
+        socket.on("callOffer", ({ room, caller, offer, callType }) => socket.to(room).emit("callOffer", { caller, offer, callType }));
+        socket.on("callAnswer", ({ room, user, answer }) => socket.to(room).emit("callAnswer", { user, answer }));
+        socket.on("callIceCandidate", ({ room, candidate }) => socket.to(room).emit("callIceCandidate", { candidate }));
+        socket.on("callEnded", ({ room, user }) => socket.to(room).emit("callEnded", { user }));
+        socket.on("callDeclined", ({ room, user }) => socket.to(room).emit("callDeclined", { user }));
+
+        // ── Disconnect ──────────────────────────────────────
+        socket.on("disconnect", async () => {
+            activeConnections.dec();
             if (joinedRoom && joinedUser) {
                 await redisClient.sRem(`room:${joinedRoom}:online`, joinedUser);
-                const onlineUsers = await redisClient.sMembers(`room:${joinedRoom}:online`);
-                io.to(joinedRoom).emit("onlineUsers", onlineUsers);
+                io.to(joinedRoom).emit("onlineUsers", await redisClient.sMembers(`room:${joinedRoom}:online`));
+                socket.to(joinedRoom).emit("callEnded", { user: joinedUser }); // clean up any active call
             }
         });
     });

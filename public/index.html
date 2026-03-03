@@ -5,8 +5,321 @@
     <title>Nexus Chat</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
     <link href="./css/style.css" rel="stylesheet" />
+    <style>
+        /* ── File & Call additions ─────────────────────── */
+        .attach-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(99, 91, 255, 0.10);
+            border: 1px solid rgba(99, 91, 255, 0.22);
+            color: var(--primary, #635bff);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.18s;
+            flex-shrink: 0;
+        }
+
+        .attach-btn:hover {
+            background: rgba(99, 91, 255, 0.20);
+            transform: translateY(-1px);
+        }
+
+        .attach-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .call-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 91, 255, 0.22);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.18s;
+            flex-shrink: 0;
+            font-size: 16px;
+            background: none;
+        }
+
+        .call-btn.audio {
+            background: rgba(16, 185, 129, 0.10);
+            border-color: rgba(16, 185, 129, 0.28);
+        }
+
+        .call-btn.video {
+            background: rgba(59, 130, 246, 0.10);
+            border-color: rgba(59, 130, 246, 0.28);
+        }
+
+        .call-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            filter: brightness(1.15);
+        }
+
+        .call-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* file bubble */
+        .file-bubble {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(99, 91, 255, 0.08);
+            border: 1px solid rgba(99, 91, 255, 0.22);
+            border-radius: 12px;
+            padding: 10px 14px;
+            max-width: 280px;
+            cursor: pointer;
+            transition: background 0.18s;
+        }
+
+        .file-bubble:hover {
+            background: rgba(99, 91, 255, 0.15);
+        }
+
+        .file-icon {
+            font-size: 26px;
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text, #fff);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .file-size {
+            font-size: 10px;
+            color: var(--text-3, #888);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .img-bubble {
+            max-width: 260px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: block;
+            transition: opacity 0.18s;
+        }
+
+        .img-bubble:hover {
+            opacity: 0.9;
+        }
+
+        /* ── Call overlay ──────────────────────────────── */
+        #call-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(8, 8, 18, 0.94);
+            backdrop-filter: blur(20px);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        #call-overlay.active {
+            display: flex;
+        }
+
+        .call-videos {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .call-videos video {
+            border-radius: 18px;
+            background: #0d0d1a;
+            object-fit: cover;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        #remote-video {
+            width: min(480px, 90vw);
+            height: min(360px, 55vw);
+        }
+
+        #local-video {
+            width: min(160px, 30vw);
+            height: min(120px, 22vw);
+            border: 2px solid rgba(99, 91, 255, 0.4);
+        }
+
+        .call-status {
+            font-size: 15px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .call-dot-anim {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-call 1.4s infinite;
+        }
+
+        @keyframes pulse-call {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7)
+            }
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .cc-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .cc-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .cc-btn.end {
+            background: #ef4444;
+            color: white;
+        }
+
+        .cc-btn.mute {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .cc-btn.cam {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .cc-btn.active-toggle {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* incoming call toast */
+        #call-incoming {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            right: 24px;
+            z-index: 9100;
+            background: rgba(18, 18, 30, 0.97);
+            border: 1px solid rgba(99, 91, 255, 0.35);
+            border-radius: 18px;
+            padding: 18px 20px;
+            min-width: 240px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        #call-incoming.active {
+            display: block;
+        }
+
+        .inc-title {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.08em;
+        }
+
+        .inc-caller {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+        }
+
+        .inc-type-badge {
+            display: inline-block;
+            font-size: 10px;
+            background: rgba(99, 91, 255, 0.2);
+            color: #a78bfa;
+            border-radius: 6px;
+            padding: 2px 7px;
+            margin-left: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .inc-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .inc-accept {
+            flex: 1;
+            padding: 9px;
+            border-radius: 10px;
+            border: none;
+            background: #10b981;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .inc-decline {
+            flex: 1;
+            padding: 9px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+    </style>
 </head>
 
 <body>
@@ -27,20 +340,11 @@
                     <div class="app-sub" id="room-label">Select a room to begin</div>
                 </div>
             </div>
-
-            <!-- right side: user info + conn badge + logout -->
             <div style="display:flex;align-items:center;gap:10px;">
-
-                <!-- logged in user -->
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div id="user-avatar" style="
-                    width:32px;height:32px;border-radius:10px;
-                    background:var(--gradient);
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:13px;font-weight:700;color:white;
-                    box-shadow:0 3px 10px var(--primary-glow);
-                    flex-shrink:0;
-                "></div>
+                    <div id="user-avatar"
+                        style="width:32px;height:32px;border-radius:10px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;box-shadow:0 3px 10px var(--primary-glow);flex-shrink:0;">
+                    </div>
                     <div>
                         <div id="user-display"
                             style="font-size:13px;font-weight:600;color:var(--text);line-height:1.2;"></div>
@@ -48,25 +352,14 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- divider -->
                 <div style="width:1px;height:28px;background:var(--border);"></div>
-
-                <!-- connection badge -->
                 <div class="conn-badge">
                     <div class="conn-dot" id="conn-dot"></div>
                     <span class="conn-text" id="conn-text">offline</span>
                 </div>
-
-                <!-- logout button -->
-                <button id="logout-btn" title="Sign out" style="
-                width:34px;height:34px;border-radius:10px;
-                background:rgba(244,63,94,0.08);
-                border:1px solid rgba(244,63,94,0.18);
-                color:#f43f5e;cursor:pointer;
-                display:flex;align-items:center;justify-content:center;
-                transition:all 0.18s;flex-shrink:0;
-            " onmouseover="this.style.background='rgba(244,63,94,0.15)';this.style.transform='translateY(-1px)'"
+                <button id="logout-btn" title="Sign out"
+                    style="width:34px;height:34px;border-radius:10px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.18);color:#f43f5e;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;"
+                    onmouseover="this.style.background='rgba(244,63,94,0.15)';this.style.transform='translateY(-1px)'"
                     onmouseout="this.style.background='rgba(244,63,94,0.08)';this.style.transform=''">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -74,7 +367,6 @@
                         <line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
                 </button>
-
             </div>
         </div>
 
@@ -110,9 +402,28 @@
         <!-- Toast Layer -->
         <div class="toast-layer" id="toast-layer"></div>
 
-        <!-- Input -->
+        <!-- Input Bar -->
         <div class="input-bar">
-            <form class="input-row" id="form">
+            <form class="input-row" id="form" style="display:flex;gap:8px;align-items:center;">
+                <!-- Hidden file picker -->
+                <input type="file" id="file-input" style="display:none" multiple
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,.7z" />
+
+                <!-- Attach -->
+                <button type="button" class="attach-btn" id="attach-btn" title="Attach file" disabled>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"
+                        viewBox="0 0 24 24">
+                        <path
+                            d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                </button>
+
+                <!-- Audio call -->
+                <button type="button" class="call-btn audio" id="audio-call-btn" title="Audio call"
+                    disabled>🎙️</button>
+                <!-- Video call -->
+                <button type="button" class="call-btn video" id="video-call-btn" title="Video call" disabled>📹</button>
+
                 <input class="msg-input" id="input" autocomplete="off" placeholder="Type a message…" disabled />
                 <button class="btn-send" type="submit" id="send-btn" disabled>
                     <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2"
@@ -123,38 +434,68 @@
                 </button>
             </form>
         </div>
+    </div>
 
+    <!-- ── Call Overlay ─────────────────────────────────── -->
+    <div id="call-overlay">
+        <div class="call-status">
+            <div class="call-dot-anim"></div>
+            <span id="call-status-text">Calling…</span>
+        </div>
+        <div class="call-videos">
+            <div style="position:relative;">
+                <video id="remote-video" autoplay playsinline></video>
+                <div
+                    style="position:absolute;bottom:10px;left:12px;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace;">
+                    Remote</div>
+            </div>
+            <div style="position:relative;">
+                <video id="local-video" autoplay playsinline muted></video>
+                <div
+                    style="position:absolute;bottom:6px;left:8px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);font-family:'JetBrains Mono',monospace;">
+                    You</div>
+            </div>
+        </div>
+        <div class="call-controls">
+            <button class="cc-btn mute" id="cc-mute" title="Toggle mute">🎙️</button>
+            <button class="cc-btn cam" id="cc-cam" title="Toggle camera">📹</button>
+            <button class="cc-btn end" id="cc-end" title="End call">📵</button>
+        </div>
+    </div>
+
+    <!-- ── Incoming Call Panel ─────────────────────────── -->
+    <div id="call-incoming">
+        <div class="inc-title">INCOMING CALL</div>
+        <div class="inc-caller" id="inc-caller-name">
+            <span id="inc-caller-text">Unknown</span>
+            <span class="inc-type-badge" id="inc-type-badge">audio</span>
+        </div>
+        <div class="inc-btns">
+            <button class="inc-accept" id="inc-accept">✓ Accept</button>
+            <button class="inc-decline" id="inc-decline">✕ Decline</button>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
     <script>
-        let userData = null;
-        let token = null;
+        // ═══════════════════════════════════════════════════════
+        //  Auth
+        // ═══════════════════════════════════════════════════════
+        let userData = null, token = null;
+        try { token = localStorage.getItem("token"); userData = JSON.parse(localStorage.getItem("user") || "null"); } catch (e) { }
+        if (!token || !userData) window.location.href = "/login.html";
 
-        try {
-            token = localStorage.getItem("token");
-            userData = JSON.parse(localStorage.getItem("user") || "null");
-        } catch (e) {
-            console.error("Failed to parse user from localStorage:", e);
-        }
+        const socket = io();
 
-        // redirect to login if no token
-        if (!token || !userData) {
-            window.location.href = "/login.html";
-        }
-
-        // const socket = io("http://localhost:3000");
-        const socket = io(); // Automatically uses https://nodejs-socket-io-chat-app.onrender.com
-
-        let currentRoom = null;
-        let currentUser = null;
+        let currentRoom = null, currentUser = null;
 
         const displayName = userData?.username || "User";
         document.getElementById("user-display").textContent = displayName;
         document.getElementById("user-avatar").textContent = displayName.charAt(0).toUpperCase();
         document.getElementById("username").value = displayName;
-        document.getElementById("username").disabled = true; // already known, lock it
+        document.getElementById("username").disabled = true;
 
+        // refs
         const msgList = document.getElementById("messages");
         const inputEl = document.getElementById("input");
         const sendBtn = document.getElementById("send-btn");
@@ -165,53 +506,45 @@
         const onlineBar = document.getElementById("online-bar");
         const onlineUsers = document.getElementById("online-users");
         const toastLayer = document.getElementById("toast-layer");
+        const fileInput = document.getElementById("file-input");
+        const attachBtn = document.getElementById("attach-btn");
+        const audioCallBtn = document.getElementById("audio-call-btn");
+        const videoCallBtn = document.getElementById("video-call-btn");
 
+        // ── connection status ──────────────────────────────────
+        socket.on("connect", () => { connDot.classList.add("live"); connText.textContent = "Connected"; connText.classList.add("live"); });
+        socket.on("disconnect", () => { connDot.classList.remove("live"); connText.textContent = "Offline"; connText.classList.remove("live"); });
 
+        // ── logout ─────────────────────────────────────────────
         document.getElementById("logout-btn").addEventListener("click", () => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
+            localStorage.removeItem("token"); localStorage.removeItem("user");
             if (socket?.connected) socket.disconnect();
             window.location.href = "/login.html";
         });
 
-
-        // ── Connection ─────────────────────────────────────────
-        socket.on("connect", () => {
-            connDot.classList.add("live");
-            connText.textContent = "Connected";
-            connText.classList.add("live");
-        });
-        socket.on("disconnect", () => {
-            connDot.classList.remove("live");
-            connText.textContent = "Offline";
-            connText.classList.remove("live");
-        });
-
-        // ── Join ───────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        //  Join
+        // ═══════════════════════════════════════════════════════
         function joinRoom() {
-            // username is pre-filled and locked — only need room
             const user = userData.username;
             const room = document.getElementById("room").value.trim();
             if (!room) {
                 const el = document.getElementById("room");
-                el.classList.add("shake");
-                el.focus();
-                setTimeout(() => el.classList.remove("shake"), 400);
-                return;
+                el.classList.add("shake"); el.focus();
+                setTimeout(() => el.classList.remove("shake"), 400); return;
             }
-            currentUser = user;
-            currentRoom = room;
+            currentUser = user; currentRoom = room;
             socket.emit("joinRoom", { room, user });
-
             roomLabel.textContent = `# ${room}`;
             roomLabel.classList.add("active");
             joinPanel.classList.add("gone");
-            inputEl.disabled = false;
-            sendBtn.disabled = false;
+            [inputEl, sendBtn, attachBtn, audioCallBtn, videoCallBtn].forEach(el => el.disabled = false);
             inputEl.focus();
         }
 
-        // ── Send ───────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        //  Text messages
+        // ═══════════════════════════════════════════════════════
         document.getElementById("form").addEventListener("submit", e => {
             e.preventDefault();
             if (!currentRoom || !currentUser) { showToast("Join a room first."); return; }
@@ -221,31 +554,283 @@
             inputEl.value = "";
         });
 
-        // ── Receive ────────────────────────────────────────────
         socket.on("message", msg => addMessage(msg.sender, msg.content, msg.sender === currentUser));
 
-        // ── History (Redis) ────────────────────────────────────
         socket.on("history", msgs => {
             if (!msgs?.length) { addDivider("no previous messages"); return; }
             addDivider(`${msgs.length} earlier message${msgs.length !== 1 ? "s" : ""}`);
-            msgs.forEach(m => addMessage(m.sender, m.content, m.sender === currentUser, true));
+            msgs.forEach(m => {
+                if (m.fileData) addFileMessage(m.sender, m.fileData, m.sender === currentUser, true);
+                else addMessage(m.sender, m.content, m.sender === currentUser, true);
+            });
             addDivider("new messages");
         });
 
-        // ── Presence (Redis) ───────────────────────────────────
         socket.on("onlineUsers", users => {
             onlineBar.classList.add("show");
             onlineUsers.innerHTML = users.map(u =>
-                `<span class="chip ${u === currentUser ? 'me' : 'other'}">
-                ${u === currentUser ? '◆' : '●'} ${esc(u)}
-            </span>`
+                `<span class="chip ${u === currentUser ? 'me' : 'other'}">${u === currentUser ? '◆' : '●'} ${esc(u)}</span>`
             ).join("");
         });
 
-        // ── Error / Rate limit ─────────────────────────────────
         socket.on("error", ({ message }) => showToast(message));
 
-        // ── Helpers ────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════
+        //  FILE SHARING
+        // ═══════════════════════════════════════════════════════
+        attachBtn.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", () => {
+            [...fileInput.files].forEach(f => sendFile(f));
+            fileInput.value = "";
+        });
+
+        function sendFile(file) {
+            if (!currentRoom || !currentUser) { showToast("Join a room first."); return; }
+            const MAX = 10 * 1024 * 1024;
+            if (file.size > MAX) { showToast(`"${file.name}" exceeds 10 MB limit.`); return; }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const fileData = { name: file.name, type: file.type, size: file.size, data: e.target.result };
+                socket.emit("fileMessage", { room: currentRoom, user: currentUser, fileData });
+                addFileMessage(currentUser, fileData, true);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // receive file from others
+        socket.on("fileMessage", msg => {
+            if (msg.sender !== currentUser) addFileMessage(msg.sender, msg.fileData, false);
+        });
+
+        function addFileMessage(sender, fileData, isSelf = false, isHistory = false) {
+            document.getElementById("placeholder")?.remove();
+            const li = document.createElement("li");
+            li.className = "msg-in";
+            const initial = (isSelf ? currentUser : sender).charAt(0).toUpperCase();
+            const isImage = fileData.type?.startsWith("image/");
+            const sizeLabel = formatBytes(fileData.size);
+            const safeData = fileData.data; // already a data URL
+
+            let bodyHtml;
+            if (isImage) {
+                bodyHtml = `<img class="img-bubble" src="${safeData}" alt="${esc(fileData.name)}"
+                onclick="viewImg(this.src,'${esc(fileData.name)}')" />`;
+            } else {
+                bodyHtml = `<div class="file-bubble" onclick="dlFile('${esc(fileData.name)}', this)">
+                <div class="file-icon">${fileIcon(fileData.type, fileData.name)}</div>
+                <div class="file-info">
+                    <div class="file-name">${esc(fileData.name)}</div>
+                    <div class="file-size">${sizeLabel} · click to download</div>
+                </div>
+            </div>`;
+            }
+
+            li.innerHTML = `
+            <div class="msg-group ${isSelf ? 'self' : 'other'}">
+                <div class="msg-meta">
+                    <div class="msg-avatar ${isSelf ? '' : 'other-av'}">${initial}</div>
+                    <span class="msg-name">${isSelf ? 'You' : esc(sender)}</span>
+                </div>
+                <div${isHistory ? ' class="history"' : ''}>${bodyHtml}</div>
+            </div>`;
+
+            // store data on the element for download
+            if (!isImage) {
+                li.querySelector(".file-bubble")._fileData = fileData.data;
+            }
+            msgList.appendChild(li);
+            msgList.scrollTop = msgList.scrollHeight;
+        }
+
+        // We store data on the node to avoid huge inline attrs
+        function dlFile(name, el) {
+            const data = el._fileData;
+            if (!data) return;
+            const a = document.createElement("a");
+            a.href = data; a.download = name; a.click();
+        }
+        function viewImg(src, name) {
+            const w = window.open("", "_blank");
+            w.document.write(`<!DOCTYPE html><html><head><title>${name}</title><style>body{margin:0;background:#0a0a14;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:100%;max-height:100vh;border-radius:8px;}</style></head><body><img src="${src}"/></body></html>`);
+        }
+
+        function fileIcon(mime, name) {
+            if (!mime) mime = "";
+            if (mime.startsWith("video/")) return "🎬";
+            if (mime.startsWith("audio/")) return "🎵";
+            if (mime.includes("pdf")) return "📄";
+            if (mime.includes("zip") || mime.includes("rar") || name?.endsWith(".7z")) return "🗜️";
+            if (mime.includes("word") || name?.endsWith(".doc") || name?.endsWith(".docx")) return "📝";
+            if (mime.includes("sheet") || name?.endsWith(".xls") || name?.endsWith(".xlsx")) return "📊";
+            return "📁";
+        }
+        function formatBytes(b) {
+            if (!b) return "?";
+            if (b < 1024) return b + " B";
+            if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+            return (b / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  WEBRTC — AUDIO / VIDEO CALLS
+        // ═══════════════════════════════════════════════════════
+        const STUN = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" }
+            ]
+        };
+
+        let pc = null, localStream = null;
+        let callType = null, pendingOffer = null;
+        let mutedAudio = false, camOff = false;
+
+        const overlay = document.getElementById("call-overlay");
+        const statusTxt = document.getElementById("call-status-text");
+        const localVid = document.getElementById("local-video");
+        const remoteVid = document.getElementById("remote-video");
+        const incPanel = document.getElementById("call-incoming");
+
+        audioCallBtn.addEventListener("click", () => startCall("audio"));
+        videoCallBtn.addEventListener("click", () => startCall("video"));
+        document.getElementById("cc-end").addEventListener("click", endCall);
+        document.getElementById("inc-accept").addEventListener("click", acceptCall);
+        document.getElementById("inc-decline").addEventListener("click", declineCall);
+
+        document.getElementById("cc-mute").addEventListener("click", () => {
+            mutedAudio = !mutedAudio;
+            localStream?.getAudioTracks().forEach(t => t.enabled = !mutedAudio);
+            const btn = document.getElementById("cc-mute");
+            btn.textContent = mutedAudio ? "🔇" : "🎙️";
+            btn.classList.toggle("active-toggle", mutedAudio);
+        });
+        document.getElementById("cc-cam").addEventListener("click", () => {
+            camOff = !camOff;
+            localStream?.getVideoTracks().forEach(t => t.enabled = !camOff);
+            const btn = document.getElementById("cc-cam");
+            btn.textContent = camOff ? "🚫" : "📹";
+            btn.classList.toggle("active-toggle", camOff);
+        });
+
+        // ── initiate call ──────────────────────────────────────
+        async function startCall(type) {
+            if (!currentRoom || !currentUser) { showToast("Join a room first."); return; }
+            if (pc) { showToast("Already in a call."); return; }
+            callType = type;
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" });
+            } catch (e) { showToast("Camera/microphone access denied."); return; }
+
+            setVideoVisibility(type === "video");
+            localVid.srcObject = localStream;
+
+            createPC();
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit("callOffer", { room: currentRoom, caller: currentUser, offer, callType: type });
+
+            statusTxt.textContent = `Calling… (${type})`;
+            overlay.classList.add("active");
+        }
+
+        // ── signalling ─────────────────────────────────────────
+        socket.on("callOffer", async ({ caller, offer, callType: type }) => {
+            if (caller === currentUser) return;
+            pendingOffer = offer;
+            callType = type;
+            document.getElementById("inc-caller-text").textContent = caller;
+            document.getElementById("inc-type-badge").textContent = type;
+            incPanel.classList.add("active");
+        });
+
+        socket.on("callAnswer", async ({ answer }) => {
+            if (!pc) return;
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+            statusTxt.textContent = "Connected";
+        });
+
+        socket.on("callIceCandidate", async ({ candidate }) => {
+            if (!pc || !candidate) return;
+            try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) { }
+        });
+
+        socket.on("callEnded", () => { showToast("Call ended."); teardown(); });
+        socket.on("callDeclined", () => { showToast("Call declined."); teardown(); });
+
+        // ── accept ─────────────────────────────────────────────
+        async function acceptCall() {
+            incPanel.classList.remove("active");
+            if (!pendingOffer) return;
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === "video" });
+            } catch (e) { showToast("Camera/microphone access denied."); return; }
+
+            setVideoVisibility(callType === "video");
+            localVid.srcObject = localStream;
+
+            createPC();
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+            await pc.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit("callAnswer", { room: currentRoom, user: currentUser, answer });
+
+            statusTxt.textContent = `Connected (${callType})`;
+            overlay.classList.add("active");
+        }
+
+        function declineCall() {
+            incPanel.classList.remove("active");
+            socket.emit("callDeclined", { room: currentRoom, user: currentUser });
+            pendingOffer = null;
+        }
+
+        function createPC() {
+            pc = new RTCPeerConnection(STUN);
+            pc.onicecandidate = ({ candidate }) => {
+                if (candidate) socket.emit("callIceCandidate", { room: currentRoom, candidate });
+            };
+            pc.ontrack = ({ streams }) => {
+                if (streams[0]) remoteVid.srcObject = streams[0];
+            };
+            pc.onconnectionstatechange = () => {
+                if (["disconnected", "failed", "closed"].includes(pc?.connectionState)) {
+                    showToast("Call connection lost."); teardown();
+                }
+            };
+        }
+
+        function endCall() {
+            socket.emit("callEnded", { room: currentRoom, user: currentUser });
+            teardown();
+        }
+
+        function teardown() {
+            localStream?.getTracks().forEach(t => t.stop());
+            pc?.close();
+            pc = null; localStream = null; callType = null; pendingOffer = null;
+            localVid.srcObject = null; remoteVid.srcObject = null;
+            overlay.classList.remove("active");
+            incPanel.classList.remove("active");
+            mutedAudio = false; camOff = false;
+            document.getElementById("cc-mute").textContent = "🎙️";
+            document.getElementById("cc-cam").textContent = "📹";
+            document.getElementById("cc-mute").classList.remove("active-toggle");
+            document.getElementById("cc-cam").classList.remove("active-toggle");
+        }
+
+        function setVideoVisibility(hasVideo) {
+            remoteVid.style.display = hasVideo ? "block" : "none";
+            localVid.style.display = hasVideo ? "block" : "none";
+        }
+
+        // ═══════════════════════════════════════════════════════
+        //  Helpers
+        // ═══════════════════════════════════════════════════════
         function addMessage(sender, content, isSelf = false, isHistory = false) {
             document.getElementById("placeholder")?.remove();
             const li = document.createElement("li");
@@ -259,30 +844,25 @@
                 </div>
                 <div class="bubble ${isSelf ? 'self' : 'other'}${isHistory ? ' history' : ''}">${esc(content)}</div>
             </div>`;
-            msgList.appendChild(li);
-            msgList.scrollTop = msgList.scrollHeight;
+            msgList.appendChild(li); msgList.scrollTop = msgList.scrollHeight;
         }
 
         function addDivider(text) {
             const li = document.createElement("li");
             li.className = "msg-in";
             li.innerHTML = `<div class="divider">${esc(text)}</div>`;
-            msgList.appendChild(li);
-            msgList.scrollTop = msgList.scrollHeight;
+            msgList.appendChild(li); msgList.scrollTop = msgList.scrollHeight;
         }
 
         function showToast(text) {
             const t = document.createElement("div");
-            t.className = "toast";
-            t.textContent = `⚠ ${text}`;
+            t.className = "toast"; t.textContent = `⚠ ${text}`;
             toastLayer.appendChild(t);
             setTimeout(() => t.remove(), 3200);
         }
 
         function esc(s) {
-            return String(s)
-                .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
 
         ["username", "room"].forEach(id =>
